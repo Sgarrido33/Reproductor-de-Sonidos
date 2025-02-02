@@ -109,6 +109,7 @@ class SoundBoard(QWidget):
     def __init__(self):
         super().__init__()
         self.sounds = []
+        self.next_id = 1
         self.initUI()
         self.load_sounds()
 
@@ -140,39 +141,35 @@ class SoundBoard(QWidget):
                 "volume": dialog.volume_slider.value(),
                 "hotkey": dialog.hotkey_input.text()
             }
+
             # Solo agregamos a la lista y UI si no está vacío
             if new_sound["name"] and new_sound["file"]:
                 self.add_sound(new_sound)
                 self.save_sounds()  # Guardar cambios en el JSON
-            else:
-                print("No se agregó sonido, faltan datos.")
-        else:
-            print("Cancelado")
+
 
     #Boton de sound
     def add_sound(self, sound):
-        if sound not in self.sounds:
-            print(f"Agregando sonido: {sound}")
-            self.sounds.append(sound)
+        self.sounds.append(sound)
 
-            # Calculamos la posición en la cuadrícula
-            index = len(self.sounds) - 1
-            row = index // 2
-            col = (index % 2) * 2
+        # Calculamos la posición en la cuadrícula
+        index = len(self.sounds) - 1
+        row = index // 2
+        col = (index % 2) * 2
 
-            # Creamos el botón de reproducción
-            btn = QPushButton("▶")
-            btn.setStyleSheet("font-size: 16px; padding: 10px;")
-            btn.clicked.connect(lambda checked, s=sound["file"]: self.play_sound(s))
+        # Creamos el botón de reproducción
+        btn = QPushButton("▶")
+        btn.setStyleSheet("font-size: 16px; padding: 10px;")
+        btn.clicked.connect(lambda checked, s=sound["file"]: self.play_sound(s))
 
-            # Creamos la etiqueta con el nombre del sonido
-            label = QLabel(sound["name"])
+        # Creamos la etiqueta con el nombre del sonido
+        label = QLabel(sound["name"])
 
-            if self.grid_layout is None:
-                return
+        if self.grid_layout is None:
+            return
 
-            self.grid_layout.addWidget(btn, row, col)
-            self.grid_layout.addWidget(label, row, col + 1)
+        self.grid_layout.addWidget(btn, row, col)
+        self.grid_layout.addWidget(label, row, col + 1)
 
     def play_sound(self, sound_name): # Completar
         print(f"Reproduciendo: {sound_name}")
@@ -185,7 +182,11 @@ class SoundBoard(QWidget):
         # Limpieza de sonidos
         self.sounds = []
 
-        #TODO(Crear json si no existe)
+        #self.next_id = max(sound['id'] for sound in self.sounds) + 1
+
+        if not os.path.exists("sounds_data.json"):
+            with open("sounds_data.json", "w", encoding="utf-8") as file:
+                json.dump([], file, ensure_ascii=False, indent=4)
 
         with open("sounds_data.json", "r", encoding="utf-8") as file:
             sounds_data = json.load(file)
