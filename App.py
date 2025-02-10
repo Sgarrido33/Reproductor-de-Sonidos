@@ -8,6 +8,7 @@ import sys
 from Add_Sound_Ventana import AddSoundDialog
 from Ventana_Principal import Ui_MainWindow
 from PyQt6 import QtWidgets
+from PyQt6 import QtCore
 
 DATA_FILE = "sounds_data.json"
 
@@ -21,12 +22,19 @@ class SoundBoard(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         #self.load_sounds()
 
+        #Desaparecer TitleBar y bordes
+        self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setStyleSheet("background-color: rgb(30, 30, 30);")
+
         # Funcionalidades de los botones
         self.ui.pushButton_3.clicked.connect(self.minimize_window)  #Minimize
         self.ui.pushButton.clicked.connect(self.maximize_restore_window)  #Maximize/Restore
         self.ui.pushButton_2.clicked.connect(self.close)  #Close
 
         self.is_maximized = False
+        self.drag_pos = None
+        self.titlebar = self.ui.Barra_Principal
 
     def minimize_window(self):
         self.showMinimized()
@@ -38,6 +46,22 @@ class SoundBoard(QtWidgets.QMainWindow):
         else:
             self.showMaximized()
             self.is_maximized = True
+
+    def mousePressEvent(self, event):
+        #Solo permite mover la ventana si se hace clic en la Barra_Principal
+        if event.button() == QtCore.Qt.MouseButton.LeftButton and self.titlebar.underMouse():
+            self.drag_pos = event.globalPosition().toPoint()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        #Mueve la ventana solo si se arrastra desde la Barra_Principal
+        if event.buttons() == QtCore.Qt.MouseButton.LeftButton and self.drag_pos and self.titlebar.underMouse():
+            new_pos = self.pos() + (event.globalPosition().toPoint() - self.drag_pos)
+            self.move(new_pos)
+            self.drag_pos = event.globalPosition().toPoint()
+
+        event.accept()
+
 
     def open_add_dialog(self):
         dialog = AddSoundDialog(self)
