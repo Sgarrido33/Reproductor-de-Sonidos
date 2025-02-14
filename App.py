@@ -1,14 +1,14 @@
 import os
-import json
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QGridLayout, QDialog, QLineEdit, \
-    QSlider, QHBoxLayout, QFileDialog, QMessageBox, QSizePolicy
 import sys
-from Add_Sound_Ventana import AddSoundDialog
+import json
+
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QPushButton, QLabel, QFileDialog, QMessageBox
+)
+from PyQt6 import QtWidgets, QtCore, QtGui
+
 from Ventana_Principal import Ui_MainWindow
-from PyQt6 import QtWidgets
-from PyQt6 import QtCore
 
 DATA_FILE = "sounds_data.json"
 
@@ -20,7 +20,15 @@ class SoundBoard(QtWidgets.QMainWindow):
         self.next_id = 0
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        #self.load_sounds()
+        self.load_sounds()
+
+        self.grid_layout = QtWidgets.QGridLayout()
+        self.grid_layout.setSpacing(10)  # Espaciado entre botones
+        self.ui.frame_2.setLayout(self.grid_layout)
+
+        self.column_count = 4  # Número máximo de columnas antes de hacer una nueva fila
+        self.current_row = 0
+        self.current_col = 0
 
         #Desaparecer TitleBar y bordes
         self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint)
@@ -33,8 +41,17 @@ class SoundBoard(QtWidgets.QMainWindow):
         self.ui.pushButton_2.clicked.connect(self.close)  #Close
 
         self.is_maximized = False
-        self.drag_pos = None
+        self.dragging = False
         self.titlebar = self.ui.Barra_Principal
+
+        # Redimension
+
+        self._resizing = False
+        self._margin = 10
+
+        # Funcionalidad Boton Añadir
+
+        self.ui.btn_add.clicked.connect(self.open_file)
 
     def minimize_window(self):
         self.showMinimized()
@@ -62,59 +79,85 @@ class SoundBoard(QtWidgets.QMainWindow):
 
         event.accept()
 
-
-    def open_add_dialog(self):
-        dialog = AddSoundDialog(self)
-
-        # Para el next_id
-        with open("sounds_data.json", "r", encoding="utf-8") as file:
-            sounds_data = json.load(file)
-
-        if sounds_data:
-            self.next_id = max(sound['id'] for sound in sounds_data) + 1
-
-        # New Sound
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            new_sound = {
-                "name": dialog.name_input.text(),
-                "file": dialog.file_input.text(),
-                "volume": dialog.volume_slider.value(),
-                "hotkey": dialog.hotkey_input.text()
-            }
-
-            # Solo agregamos a la lista y UI si no está vacío
-            if new_sound["name"] and new_sound["file"]:
-                new_sound['id'] = self.next_id
-                self.add_sound(new_sound)
-                self.save_sounds()  # Guardar cambios en el JSON
-
-    # Boton de sound
-    def add_sound(self, sound):
-        self.sounds.append(sound)
-
-        # Calculamos la posición en la cuadrícula
-        index = len(self.sounds) - 1
-        row = index // 2
-        col = (index % 2) * 2
-
-        # Creamos el botón de reproducción
-        btn = QPushButton("▶")
-        btn.setStyleSheet("font-size: 16px; padding: 10px;")
-        btn.clicked.connect(lambda checked, s=sound: self.play_sound(s["id"], btn))
-
-        label = QLabel(sound["name"])
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet("font-size: 14px; font-weight: bold;")
-
-        if self.grid_layout is None:
+    def open_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Seleccionar archivo de audio", "",
+                                                   "Archivos de Audio (*.mp3 *.wav)")
+        if not file_path:
             return
 
-        self.grid_layout.addWidget(btn, row, col)
-        self.grid_layout.addWidget(label, row, col + 1)
+        sound_name = os.path.basename(file_path)  # Nombre de archivo, nombre de sonido default
 
-        if not hasattr(self, "buttons"):
-            self.buttons = {}
-        self.buttons[sound["id"]] = btn
+        existing_sounds = []
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "r", encoding="utf-8") as file:
+                existing_sounds = json.load(file)
+
+        if existing_sounds:
+            self.next_id = max(sound["id"] for sound in existing_sounds) + 1
+        else:
+            self.next_id = 0
+
+        new_sound = {
+            "id": self.next_id,
+            "name": sound_name,
+            "file": file_path,
+            "volume": 50,
+            "hotkey": ""
+        }
+
+        self.save_sound_to_json(new_sound)
+        self.add_sound_button(new_sound)
+        QMessageBox.information(self, "Check", f"Sonido '{sound_name}' agregado correctamente.") # Lo quitare luego
+
+        self.next_id += 1
+
+    def save_sound_to_json(self, sound_data):
+        data = []
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "r", encoding="utf-8") as file:
+                data = json.load(file)
+
+        data.append(sound_data)
+
+        with open(DATA_FILE, "w", encoding="utf-8") as file:
+            json.dump(data, file, indent=4, ensure_ascii=False)
+
+    def load_sounds(self):
+        if not os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "w", encoding="utf-8") as file:
+                json.dump([], file, ensure_ascii=False, indent=4)
+
+        with open(DATA_FILE, "r", encoding="utf-8") as file:
+            sounds_data = json.load(file)
+
+        for sound in sounds_data:
+            self.add_sound_button(sound)
+
+    def add_sound_button(self, sound):
+        button = QPushButton(self.ui.frame_2)
+        button.setFixedSize(70, 70)
+        button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+
+        icon_play = QtGui.QIcon("Images/play.jpg")
+        button.setIcon(icon_play)
+        button.setIconSize(QtCore.QSize(70, 70))
+
+        # Pendiente de play_sound
+        button.clicked.connect(lambda: self.play_sound(sound["file"]))
+
+        max_length = 12
+        display_name = (sound["name"][:max_length] + "...") if len(sound["name"]) > max_length else sound["name"]
+
+        label = QLabel(display_name, self.ui.frame_2)
+        label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        label.setStyleSheet("color: white; font-size: 12px; max-width: 140px;")
+
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(button, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(label, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        self.ui.layout_frame_2.addLayout(layout)
+
 
     def play_sound(self, sound_id, btn):
         sound = next((s for s in self.sounds if s["id"] == sound_id), None)
@@ -129,20 +172,6 @@ class SoundBoard(QtWidgets.QMainWindow):
     def save_sounds(self):
         with open(DATA_FILE, "w") as file:
             json.dump(self.sounds, file, indent=4)
-
-    def load_sounds(self):
-        # Limpieza de sonidos
-        self.sounds = []
-
-        if not os.path.exists("sounds_data.json"):
-            with open("sounds_data.json", "w", encoding="utf-8") as file:
-                json.dump([], file, ensure_ascii=False, indent=4)
-
-        with open("sounds_data.json", "r", encoding="utf-8") as file:
-            sounds_data = json.load(file)
-
-        for sound in sounds_data:
-            self.add_sound(sound)  # Llamar a add_sound() para mostrar en la UI
 
 
 if __name__ == "__main__":

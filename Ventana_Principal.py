@@ -13,6 +13,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(743, 532)
+        MainWindow.setMinimumSize(400, 300)
         self.centralwidget = QtWidgets.QWidget(parent=MainWindow)
         self.centralwidget.setObjectName("centralwidget")
 
@@ -57,7 +58,7 @@ class Ui_MainWindow(object):
 
         self.label = QtWidgets.QLabel(parent=self.Barra_Principal)
         font = QtGui.QFont()
-        font.setFamily("Segoe UI Light")
+        font.setFamily("Lato")
         font.setPointSize(12)
         self.label.setFont(font)
         self.label.setStyleSheet("color: rgb(255, 255, 255);")
@@ -133,21 +134,44 @@ class Ui_MainWindow(object):
         self.frame_2.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
         self.frame_2.setObjectName("frame_2")
 
-        self.pushButton_4 = QtWidgets.QPushButton(parent=self.frame_2)
-        self.pushButton_4.setGeometry(QtCore.QRect(0, 10, 101, 31))
-        font = QtGui.QFont()
-        font.setFamily("Bahnschrift Light SemiCondensed")
-        font.setPointSize(-1)
-        font.setBold(True)
-        font.setKerning(True)
-        self.pushButton_4.setFont(font)
-        self.pushButton_4.setFlat(False)
-        self.pushButton_4.setObjectName("pushButton_4")
+        #Boton nuevo que este dentro de frame 2
+
+        # Boton +
+        self.btn_add = QtWidgets.QPushButton(self.frame_2)
+        self.btn_add.setFixedSize(70, 70)
+        self.btn_add.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+
+        # Icono del boton +
+        icon_plus = QtGui.QIcon()
+        icon_plus.addPixmap(QtGui.QPixmap("Images/Plus.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        self.btn_add.setIcon(icon_plus)
+        self.btn_add.setIconSize(QtCore.QSize(70, 70))
+
+        # Estilos del boton +
+        self.btn_add.setStyleSheet("""
+            QPushButton {
+                border: none;
+                background-color: transparent;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 30);
+                border-radius: 5px;
+            }
+        """)
+        self.layout_frame_2 = QtWidgets.QVBoxLayout(self.frame_2)
+        self.layout_frame_2.setContentsMargins(5, 5, 0, 0)
+        self.layout_frame_2.addWidget(self.btn_add,
+                                      alignment=QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
+        self.layout_frame_2.addStretch()
+
+
+        #
 
         self.horizontalLayout_2.addWidget(self.frame_2)
 
         self.frame_3 = QtWidgets.QFrame(parent=self.Contenido)
-        self.frame_3.setMaximumSize(QtCore.QSize(120, 16777215))
+        self.frame_3.setStyleSheet("background-color: #2b2b2b")
+        self.frame_3.setMaximumSize(QtCore.QSize(170, 16777215))
         self.frame_3.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
         self.frame_3.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
         self.frame_3.setObjectName("frame_3")
@@ -164,5 +188,4 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.label.setText(_translate("MainWindow", " Soundboard"))
-        self.pushButton_4.setText(_translate("MainWindow", "Añadir"))
+        self.label.setText(_translate("MainWindow", "   Soundboard"))
